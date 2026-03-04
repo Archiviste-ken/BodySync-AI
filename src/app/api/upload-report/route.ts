@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractTextFromImage, type OCRResult } from "@/lib/ocr/extract";
-import {
-  parseBCAReport,
-  calculateConfidence,
-  getParsingWarnings,
-} from "@/lib/parser/bcaParser";
+import { extractMetricsFromImage } from "@/lib/ocr/extract";
 import dbConnect from "@/lib/db/connect";
 import Report from "@/lib/db/models/Report";
 
-// Maximum file size: 5 MB (Part 10 — Performance)
+// Maximum file size: 5 MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 /**
@@ -72,75 +67,21 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // ── 5. OCR extraction (never throws — returns OCRResult) ──
-    let ocrResult: OCRResult;
-    try {
-      ocrResult = await extractTextFromImage(buffer);
-    } catch (err) {
-      // Defensive: should never happen since extractTextFromImage never throws,
-      // but if it does, map to a user-friendly error.
-      console.error("Unexpected OCR error:", err);
-      return NextResponse.json(
-        {
-          error:
-            "Could not process the image. Please try a different photo.",
-          code: "OCR_FAILED",
-        },
-        { status: 422 },
-      );
-    }
+    // ── 5. AI Vision extraction (replaces OCR + regex parser) ──
+    const result = await extractMetricsFromImage(buffer);
 
-    const { text: rawText, mode: ocrMode, durationMs, warning: ocrWarning } = ocrResult;
-
-    // ── 6. Parse whatever text was extracted (Task 3 — never block user) ──
-    // Skip parsing if OCR returned very little text (< 50 chars = likely failed)
-    const ocrEmpty = !rawText || rawText.trim().length < 50;
-
-    // Always attempt parsing even with partial/empty text
-    let metrics;
-    try {
-      metrics = ocrEmpty
-        ? {
-            height: null, weight: null, skeletalMuscleMass: null,
-            bodyFatMass: null, bodyFatPercent: null, bmi: null,
-            bmr: null, visceralFat: null, totalBodyWater: null,
-            leanBodyMass: null, segmentalLean: null, segmentalFat: null,
-          }
-        : parseBCAReport(rawText);
-    } catch {
-      metrics = {
-        height: null, weight: null, skeletalMuscleMass: null,
-        bodyFatMass: null, bodyFatPercent: null, bmi: null,
-        bmr: null, visceralFat: null, totalBodyWater: null,
-        leanBodyMass: null, segmentalLean: null, segmentalFat: null,
-      };
-    }
-
-   const confidence = 0
-   const warnings: string[] = []
-
-    // Append OCR-level warnings (Task 5 — improved message)
-    if (ocrEmpty) {
-      warnings.unshift(
-        "OCR could not detect text clearly. Please ensure the full report is visible or enter the values manually."
-      );
-    }
-    if (ocrWarning) {
-      warnings.unshift(`OCR Note: ${ocrWarning}`);
-    }
-
-    // ── 8. Persist to MongoDB ──
+    // ── 6. Persist to MongoDB ──
     let reportId: string | null = null;
     try {
       await dbConnect();
       const report = await Report.create({
         fileName: file.name,
-        rawText,
-        metrics,
-        confidence,
-        warnings,
-        ocrMode,
-        ocrDurationMs: durationMs,
+        rawText: result.rawText,
+        metrics: result.metrics,
+        confidence: result.confidence,
+        warnings: result.warnings,
+        ocrMode: result.mode,
+        ocrDurationMs: result.durationMs,
       });
       reportId = report._id.toString();
     } catch (dbError) {
@@ -148,18 +89,18 @@ export async function POST(request: NextRequest) {
       console.error("MongoDB save error (non-fatal):", dbError);
     }
 
-    // ── 9. Return structured result ──
+    // ── 7. Return structured result ──
     return NextResponse.json({
       success: true,
       reportId,
-      metrics,
-      rawText,
-      confidence,
-      warnings,
+      metrics: result.metrics,
+      rawText: result.rawText,
+      confidence: result.confidence,
+      warnings: result.warnings,
       fileName: file.name,
-      ocrMode,
-      ocrDurationMs: durationMs,
-      requiresCorrection: confidence < 50 || ocrEmpty,
+      ocrMode: result.mode,
+      ocrDurationMs: result.durationMs,
+      requiresCorrection: result.confidence < 50,
     });
   } catch (error) {
     // Catch-all: ensures the API ALWAYS returns a response
