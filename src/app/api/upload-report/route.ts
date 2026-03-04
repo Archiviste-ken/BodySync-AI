@@ -116,8 +116,8 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    const confidence = calculateConfidence(metrics);
-    const warnings = getParsingWarnings(metrics);
+   const confidence = 0
+   const warnings: string[] = []
 
     // Append OCR-level warnings (Task 5 — improved message)
     if (ocrEmpty) {
