@@ -1,223 +1,249 @@
-import Tesseract from 'tesseract.js';
+import Groq from 'groq-sdk';
 import sharp from 'sharp';
+import type { ParsedBCAData, SegmentalData } from '@/lib/types';
 
 // ────────────────────────────────────────────────────────────
-//  Timeout Tiers (Part 4 — Smart Timeout System)
-// ────────────────────────────────────────────────────────────
-const PREPROCESS_TIMEOUT_MS = 8_000;
-const OCR_TIMEOUT_MS = 25_000;       // hard abort (Task 4)
-const OCR_WARNING_MS = 12_000;        // logs warning (informational)
-
-/**
- * Race a promise against a timeout.
- */
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error(`${label} timed out after ${ms}ms`));
-    }, ms);
-
-    promise
-      .then((val) => { clearTimeout(timer); resolve(val); })
-      .catch((err) => { clearTimeout(timer); reject(err); });
-  });
-}
-
-// ────────────────────────────────────────────────────────────
-//  Image Preprocessing (Part 1 — Optimized Pipeline)
+//  Groq Vision-based BCA Report Extraction
+//  Replaces tesseract.js which is broken under Next.js Turbopack
 // ────────────────────────────────────────────────────────────
 
-/**
- * Aggressive image preprocessing optimized for speed on Vercel:
- *   1. Auto-rotate (EXIF orientation from phone cameras)
- *   2. Resize to max 1200px width  (smaller = dramatically faster OCR)
- *   3. Grayscale
- *   4. Linear contrast stretch (1% clip both ends)
- *   5. Sharpen text edges
- *   6. Output PNG
- */
-export async function preprocessImage(imageBuffer: Buffer): Promise<Buffer> {
-  return sharp(imageBuffer)
-    .rotate()                                          // auto-rotate from EXIF
-    .resize({ width: 1200, withoutEnlargement: true }) // max 1200px
-    .grayscale()
-    .normalize()                                       // full-range contrast
-    .threshold(160)                                    // binarize for text detection
-    .sharpen()                                         // text edge enhancement
-    .png({ compressionLevel: 6 })                     // fast PNG
-    .toBuffer();
-}
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
 
-/**
- * Crop the image into important InBody regions for targeted OCR (Part 2).
- * Returns an array of cropped buffers corresponding to key report sections.
- *
- * InBody layout (approximate vertical zones):
- *   0-8%   : Header (ID, Height, Age, Gender, Date)
- *   8-25%  : Body Composition Analysis
- *   25-40% : Muscle-Fat Analysis
- *   40-55% : Obesity Analysis
- *   55-75% : Segmental Analysis
- *   75-100%: Research Parameters + Body Composition History
- */
-async function cropRegions(imageBuffer: Buffer): Promise<Buffer[]> {
-  const metadata = await sharp(imageBuffer).metadata();
-  const w = metadata.width ?? 1200;
-  const h = metadata.height ?? 1600;
-
-  // Define vertical slices that cover all important data sections
-  const regions = [
-    // Header + Body Composition Analysis + InBody Score + Weight Control
-    { left: 0, top: 0, width: w, height: Math.round(h * 0.28) },
-    // Muscle-Fat Analysis + Nutrition Evaluation + Obesity Analysis
-    { left: 0, top: Math.round(h * 0.22), width: w, height: Math.round(h * 0.35) },
-    // Segmental + Visceral Fat + Research Parameters
-    { left: 0, top: Math.round(h * 0.50), width: w, height: Math.round(h * 0.38) },
-    // Bottom: Body Composition History (sometimes has weight/SMM/PBF)
-    { left: 0, top: Math.round(h * 0.82), width: w, height: Math.round(h * 0.18) },
-  ];
-
-  const crops = await Promise.all(
-    regions.map(async (region) => {
-      try {
-        // Clamp dimensions to image bounds
-        const clampedWidth = Math.min(region.width, w - region.left);
-        const clampedHeight = Math.min(region.height, h - region.top);
-        if (clampedWidth <= 0 || clampedHeight <= 0) return null;
-
-        return await sharp(imageBuffer)
-          .extract({
-            left: region.left,
-            top: region.top,
-            width: clampedWidth,
-            height: clampedHeight,
-          })
-          .toBuffer();
-      } catch {
-        return null;
-      }
-    }),
-  );
-
-  return crops.filter((b): b is Buffer => b !== null);
-}
-
-// ────────────────────────────────────────────────────────────
-//  OCR Extraction  (Parts 1, 2, 4)
-// ────────────────────────────────────────────────────────────
-
-/** Result from the OCR pipeline */
+/** Result from the extraction pipeline */
 export interface OCRResult {
   text: string;
-  mode: 'region' | 'full' | 'fallback';
+  mode: string;
   durationMs: number;
   warning?: string;
 }
 
-
-/**
- * Run Tesseract on a single buffer with the given timeout.
- */
-async function ocrBuffer(buf: Buffer, timeoutMs: number): Promise<string> {
-  const { data: { text } } = await withTimeout(
-    Tesseract.recognize(buf, 'eng'),
-    timeoutMs,
-    'OCR',
-  );
-
-  // Debug logging — dev mode only (PART 4)
-  if (process.env.NODE_ENV === 'development') {
-    if (!text || text.trim().length === 0) {
-      console.warn('OCR returned empty text');
-    } else {
-      console.log('OCR TEXT SAMPLE:');
-      console.log(text.slice(0, 800));
-    }
-  }
-
-  return text;
+export interface ExtractionResult {
+  metrics: ParsedBCAData;
+  rawText: string;
+  confidence: number;
+  warnings: string[];
+  mode: string;
+  durationMs: number;
 }
 
+// ────────────────────────────────────────────────────────────
+//  Prompt for structured metric extraction
+// ────────────────────────────────────────────────────────────
+
+const EXTRACTION_PROMPT = `You are analyzing a Body Composition Analysis (BCA) report image, likely from an InBody machine or similar body composition analyzer.
+
+Extract ALL of the following metrics from the image. Return ONLY a valid JSON object with these exact keys:
+
+{
+  "height": <number in cm or null>,
+  "weight": <number in kg or null>,
+  "skeletalMuscleMass": <number in kg or null>,
+  "bodyFatMass": <number in kg or null>,
+  "bodyFatPercent": <number as percentage value or null>,
+  "bmi": <number or null>,
+  "bmr": <number in kcal or null>,
+  "visceralFat": <number (level) or null>,
+  "totalBodyWater": <number in liters or null>,
+  "leanBodyMass": <number in kg or null>,
+  "segmentalLean": {
+    "rightArm": <number in kg or null>,
+    "leftArm": <number in kg or null>,
+    "trunk": <number in kg or null>,
+    "rightLeg": <number in kg or null>,
+    "leftLeg": <number in kg or null>
+  },
+  "segmentalFat": {
+    "rightArm": <number in kg or null>,
+    "leftArm": <number in kg or null>,
+    "trunk": <number in kg or null>,
+    "rightLeg": <number in kg or null>,
+    "leftLeg": <number in kg or null>
+  },
+  "rawText": "<all visible text from the report>"
+}
+
+Rules:
+- Use null for any metric you cannot find or read clearly
+- Numbers should be numeric values, not strings
+- For BMR, look for "Basal Metabolic Rate" — the value is usually in kcal
+- For visceral fat, look for "Visceral Fat Level" or "Visceral Fat Area"
+- For body fat %, look for "Percent Body Fat" or "PBF" or "Body Fat %"
+- For segmental data, use the values in kg if available
+- rawText should contain ALL text you can read from the image, line by line
+- Return ONLY the JSON object, no markdown code fences, no explanation`;
+
+// ────────────────────────────────────────────────────────────
+//  Image Preprocessing (resize for faster API transfer)
+// ────────────────────────────────────────────────────────────
+
+async function preprocessForVision(imageBuffer: Buffer): Promise<Buffer> {
+  return sharp(imageBuffer)
+    .rotate()                                          // auto-rotate from EXIF
+    .resize({ width: 1500, withoutEnlargement: true }) // reasonable size for vision
+    .png({ compressionLevel: 6 })
+    .toBuffer();
+}
+
+// ────────────────────────────────────────────────────────────
+//  Main Extraction Function
+// ────────────────────────────────────────────────────────────
+
 /**
- * Primary extraction: preprocess → region-crop → OCR each region → merge.
- * Falls back to full-page OCR if region results are too short.
- * Falls back to raw-buffer OCR if preprocessing itself fails.
- *
- * Never throws for timeout — returns partial text with a warning.
+ * Extract BCA metrics from a report image using Groq Vision API.
+ * Returns structured metrics, raw text, confidence score, and warnings.
  */
-export async function extractTextFromImage(imageBuffer: Buffer): Promise<OCRResult> {
+export async function extractMetricsFromImage(imageBuffer: Buffer): Promise<ExtractionResult> {
   const t0 = Date.now();
+  const warnings: string[] = [];
 
-  // ── Step 1: Preprocess ──
-  let processed: Buffer;
+  // Preprocess: resize to reduce payload size
+  let processedBuffer: Buffer;
   try {
-    processed = await withTimeout(
-      preprocessImage(imageBuffer),
-      PREPROCESS_TIMEOUT_MS,
-      'PREPROCESS',
-    );
+    processedBuffer = await preprocessForVision(imageBuffer);
   } catch {
-    // Preprocessing failed — try raw buffer OCR as absolute fallback
-    try {
-      const text = await withTimeout(ocrBuffer(imageBuffer, OCR_TIMEOUT_MS), OCR_TIMEOUT_MS, 'OCR_RAW');
-      return { text, mode: 'fallback', durationMs: Date.now() - t0, warning: 'Preprocessing failed; used raw image.' };
-    } catch {
-      return { text: '', mode: 'fallback', durationMs: Date.now() - t0, warning: 'IMAGE_TOO_BLURRY' };
-    }
+    processedBuffer = imageBuffer;
+    warnings.push('Image preprocessing failed; using original image.');
   }
 
-  // Set up a warning timer
-  let ocrWarningFired = false;
-  const warnTimer = setTimeout(() => { ocrWarningFired = true; }, OCR_WARNING_MS);
+  // Convert to base64 for the API
+  const base64Image = processedBuffer.toString('base64');
 
-  // ── Step 2: Region-based OCR (Part 2) ──
   try {
-    const regions = await cropRegions(processed);
+    const completion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: EXTRACTION_PROMPT },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:image/png;base64,${base64Image}`,
+              },
+            },
+          ],
+        },
+      ],
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      temperature: 0.1,
+      max_completion_tokens: 2048,
+    });
 
-    if (regions.length >= 2) {
-      // OCR each region in parallel — much faster than full-page
-      const perRegionTimeout = Math.round(OCR_TIMEOUT_MS / regions.length) + 2000;
-      const regionTexts = await Promise.allSettled(
-        regions.map((buf) => ocrBuffer(buf, perRegionTimeout)),
-      );
+    const responseText = completion.choices[0]?.message?.content ?? '';
 
-      const merged = regionTexts
-        .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
-        .map((r) => r.value)
-        .join('\n');
-
-      clearTimeout(warnTimer);
-
-      // If region OCR got meaningful text, return it
-      if (merged.trim().length > 80) {
-        return {
-          text: merged,
-          mode: 'region',
-          durationMs: Date.now() - t0,
-          warning: ocrWarningFired ? 'OCR took longer than expected.' : undefined,
-        };
-      }
+    // Extract JSON from the response (handle possible markdown wrapping)
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      warnings.push('AI could not parse the report image. Please enter values manually.');
+      return {
+        metrics: emptyMetrics(),
+        rawText: responseText,
+        confidence: 0,
+        warnings,
+        mode: 'ai-vision',
+        durationMs: Date.now() - t0,
+      };
     }
-  } catch {
-    // Region cropping/OCR failed — fall through to full-page
-  }
 
-  // ── Step 3: Full-page fallback ──
-  try {
-    const text = await withTimeout(ocrBuffer(processed, OCR_TIMEOUT_MS), OCR_TIMEOUT_MS, 'OCR_FULL');
-    clearTimeout(warnTimer);
-    return {
-      text,
-      mode: 'full',
-      durationMs: Date.now() - t0,
-      warning: ocrWarningFired ? 'OCR took longer than expected.' : undefined,
+    const parsed = JSON.parse(jsonMatch[0]);
+    const rawText: string = parsed.rawText || responseText;
+
+    const metrics: ParsedBCAData = {
+      height: safeNumber(parsed.height),
+      weight: safeNumber(parsed.weight),
+      skeletalMuscleMass: safeNumber(parsed.skeletalMuscleMass),
+      bodyFatMass: safeNumber(parsed.bodyFatMass),
+      bodyFatPercent: safeNumber(parsed.bodyFatPercent),
+      bmi: safeNumber(parsed.bmi),
+      bmr: safeNumber(parsed.bmr),
+      visceralFat: safeNumber(parsed.visceralFat),
+      totalBodyWater: safeNumber(parsed.totalBodyWater),
+      leanBodyMass: safeNumber(parsed.leanBodyMass),
+      segmentalLean: parseSegmental(parsed.segmentalLean),
+      segmentalFat: parseSegmental(parsed.segmentalFat),
     };
-  } catch (err) {
-    clearTimeout(warnTimer);
-    const msg = err instanceof Error ? err.message : '';
-    if (msg.includes('timed out')) {
-      return { text: '', mode: 'full', durationMs: Date.now() - t0, warning: 'OCR_TIMEOUT' };
+
+    // Calculate confidence based on how many core fields were extracted
+    const coreFields = [
+      metrics.height, metrics.weight, metrics.skeletalMuscleMass,
+      metrics.bodyFatMass, metrics.bodyFatPercent, metrics.bmi,
+      metrics.bmr, metrics.visceralFat, metrics.totalBodyWater,
+      metrics.leanBodyMass,
+    ];
+    const found = coreFields.filter((v) => v !== null).length;
+    const confidence = Math.round((found / coreFields.length) * 100);
+
+    if (confidence < 30) {
+      warnings.push('Only a few metrics could be extracted. Please verify and correct the values.');
     }
-    return { text: '', mode: 'full', durationMs: Date.now() - t0, warning: 'OCR_FAILED' };
+
+    return {
+      metrics,
+      rawText,
+      confidence,
+      warnings,
+      mode: 'ai-vision',
+      durationMs: Date.now() - t0,
+    };
+  } catch (error) {
+    console.error('Groq Vision API error:', error);
+    warnings.push('AI extraction failed. Please try again or enter values manually.');
+    return {
+      metrics: emptyMetrics(),
+      rawText: '',
+      confidence: 0,
+      warnings,
+      mode: 'ai-vision-failed',
+      durationMs: Date.now() - t0,
+    };
   }
+}
+
+// ────────────────────────────────────────────────────────────
+//  Backward-compatible OCR export
+// ────────────────────────────────────────────────────────────
+
+export async function extractTextFromImage(imageBuffer: Buffer): Promise<OCRResult> {
+  const result = await extractMetricsFromImage(imageBuffer);
+  return {
+    text: result.rawText,
+    mode: result.mode,
+    durationMs: result.durationMs,
+    warning: result.warnings.length > 0 ? result.warnings.join('; ') : undefined,
+  };
+}
+
+// ────────────────────────────────────────────────────────────
+//  Helpers
+// ────────────────────────────────────────────────────────────
+
+function safeNumber(val: unknown): number | null {
+  if (val === null || val === undefined) return null;
+  const n = typeof val === 'string' ? parseFloat(val) : Number(val);
+  return isNaN(n) || n < 0 ? null : n;
+}
+
+function parseSegmental(data: unknown): SegmentalData | null {
+  if (!data || typeof data !== 'object') return null;
+  const d = data as Record<string, unknown>;
+  const result: SegmentalData = {
+    rightArm: safeNumber(d.rightArm),
+    leftArm: safeNumber(d.leftArm),
+    trunk: safeNumber(d.trunk),
+    rightLeg: safeNumber(d.rightLeg),
+    leftLeg: safeNumber(d.leftLeg),
+  };
+  if (Object.values(result).every((v) => v === null)) return null;
+  return result;
+}
+
+function emptyMetrics(): ParsedBCAData {
+  return {
+    height: null, weight: null, skeletalMuscleMass: null,
+    bodyFatMass: null, bodyFatPercent: null, bmi: null,
+    bmr: null, visceralFat: null, totalBodyWater: null,
+    leanBodyMass: null, segmentalLean: null, segmentalFat: null,
+  };
 }
