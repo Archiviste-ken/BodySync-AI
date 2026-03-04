@@ -45,8 +45,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   NO_FILE: "No file was received. Please try uploading again.",
 };
 
-// Client-side timeout: 35s (server OCR timeout is 25s + overhead)
-const CLIENT_TIMEOUT_MS = 35_000;
+// Client-side timeout: 60s (AI vision extraction is fast but network may vary)
+const CLIENT_TIMEOUT_MS = 60_000;
 
 export default function Dropzone({ onUploadComplete }: DropzoneProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -210,7 +210,7 @@ export default function Dropzone({ onUploadComplete }: DropzoneProps) {
       if (err instanceof DOMException && err.name === "AbortError") {
         setErrorCode("CLIENT_TIMEOUT");
         setErrorMessage(
-          "Request timed out after 35 seconds. The image may be too complex — try a clearer, smaller photo."
+          "Request timed out. Please check your connection and try again."
         );
       } else {
         setErrorCode("NETWORK_ERROR");
