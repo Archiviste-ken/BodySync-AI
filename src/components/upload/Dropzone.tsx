@@ -1,36 +1,89 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { UploadCloud, FileText, X, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { UploadCloud, FileText, X, Loader2, CheckCircle2, AlertCircle, Clock, ImageIcon, ScanLine, BarChart3, Sparkles } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import type { ParsedBCAData } from "@/lib/types";
 
-export default function Dropzone() {
+export interface UploadResult {
+  metrics: ParsedBCAData;
+  rawText: string;
+  confidence: number;
+  warnings: string[];
+  requiresCorrection: boolean;
+  reportId?: string;
+  ocrMode?: string;
+  ocrDurationMs?: number;
+}
+
+interface DropzoneProps {
+  onUploadComplete: (result: UploadResult) => void;
+}
+
+// ── Pipeline stages with real labels ──
+const STAGES = [
+  { key: "upload", label: "Uploading file...", progress: 10, icon: UploadCloud },
+  { key: "preprocess", label: "Preprocessing image...", progress: 25, icon: ImageIcon },
+  { key: "ocr", label: "Running OCR extraction...", progress: 50, icon: ScanLine },
+  { key: "parsing", label: "Parsing metrics...", progress: 75, icon: BarChart3 },
+  { key: "saving", label: "Saving results...", progress: 90, icon: Sparkles },
+  { key: "done", label: "Extraction Complete", progress: 100, icon: CheckCircle2 },
+] as const;
+
+type StageKey = (typeof STAGES)[number]["key"];
+
+// ── User-friendly error messages for API error codes ──
+const ERROR_MESSAGES: Record<string, string> = {
+  OCR_TIMEOUT: "OCR timed out. You can still enter your values manually on the next screen.",
+  OCR_FAILED: "Could not read the image. You can still enter your values manually.",
+  IMAGE_TOO_BLURRY: "The image appears too blurry. You can still enter values manually.",
+  OCR_EMPTY: "OCR could not detect text clearly. Please ensure the full report is visible or enter the values manually.",
+  PARSING_FAILED: "Could not extract metrics. You can enter the values manually on the next screen.",
+  INVALID_FORMAT: "Unsupported file type. Please upload a JPG, PNG, or WebP image.",
+  FILE_TOO_LARGE: "File exceeds the 5 MB limit. Compress or resize the image.",
+  NO_FILE: "No file was received. Please try uploading again.",
+};
+
+// Client-side timeout: 35s (server OCR timeout is 25s + overhead)
+const CLIENT_TIMEOUT_MS = 35_000;
+
+export default function Dropzone({ onUploadComplete }: DropzoneProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<"idle" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
-
-  const router = useRouter();
+  const [stageKey, setStageKey] = useState<StageKey>("upload");
+  const abortRef = useRef<AbortController | null>(null);
+  const stageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cleanup preview URL to prevent memory leaks
   useEffect(() => {
     return () => {
       if (preview) URL.revokeObjectURL(preview);
+      if (stageTimerRef.current) clearTimeout(stageTimerRef.current);
     };
   }, [preview]);
 
   const handleFile = (selectedFile: File) => {
     if (!selectedFile.type.includes("image") && selectedFile.type !== "application/pdf") {
-      alert("Please upload an image or PDF.");
+      setErrorMessage("Please upload an image or PDF file.");
+      return;
+    }
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      setErrorMessage("File is too large. Maximum size is 5 MB.");
       return;
     }
     setFile(selectedFile);
     setUploadStatus("idle");
+    setErrorMessage(null);
+    setErrorCode(null);
     setProgress(0);
+    setStageKey("upload");
 
     if (selectedFile.type.includes("image")) {
       setPreview(URL.createObjectURL(selectedFile));
@@ -55,23 +108,56 @@ export default function Dropzone() {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFile(e.dataTransfer.files[0]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Advance through pipeline stages on a realistic schedule
+  const startStageProgression = () => {
+    // Stage 1: upload (instant)
+    setStageKey("upload");
+    setProgress(10);
+
+    // Stage 2: preprocess (after 800ms)
+    stageTimerRef.current = setTimeout(() => {
+      setStageKey("preprocess");
+      setProgress(25);
+
+      // Stage 3: ocr (after 2s more — this is the longest stage)
+      stageTimerRef.current = setTimeout(() => {
+        setStageKey("ocr");
+        setProgress(50);
+
+        // Stage 4: parsing (after 6s more for OCR)
+        stageTimerRef.current = setTimeout(() => {
+          setStageKey("parsing");
+          setProgress(75);
+        }, 6000);
+      }, 2000);
+    }, 800);
+  };
+
+  const clearStageTimers = () => {
+    if (stageTimerRef.current) {
+      clearTimeout(stageTimerRef.current);
+      stageTimerRef.current = null;
+    }
+  };
 
   const handleUpload = async () => {
     if (!file) return;
     setIsUploading(true);
     setProgress(0);
+    setErrorMessage(null);
+    setErrorCode(null);
+    setUploadStatus("idle");
 
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return 90;
-        }
-        return prev + Math.random() * 15;
-      });
-    }, 200);
+    // Start stage progression
+    startStageProgression();
+
+    // AbortController for client-side timeout
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const timeoutId = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
 
     const formData = new FormData();
     formData.append("report", file);
@@ -80,33 +166,80 @@ export default function Dropzone() {
       const res = await fetch("/api/upload-report", {
         method: "POST",
         body: formData,
+        signal: controller.signal,
       });
 
-      clearInterval(progressInterval);
+      clearTimeout(timeoutId);
+      clearStageTimers();
 
-      if (res.ok) {
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setStageKey("saving");
+        setProgress(90);
+
+        // Brief flash of "saving" stage, then complete
+        await new Promise((r) => setTimeout(r, 400));
+        setStageKey("done");
         setProgress(100);
         setUploadStatus("success");
+
+        // Hand off to parent after brief celebration
         setTimeout(() => {
-          router.push("/plan");
-        }, 1200);
+          onUploadComplete({
+            metrics: data.metrics,
+            rawText: data.rawText,
+            confidence: data.confidence,
+            warnings: data.warnings,
+            requiresCorrection: data.requiresCorrection,
+            reportId: data.reportId,
+            ocrMode: data.ocrMode,
+            ocrDurationMs: data.ocrDurationMs,
+          });
+        }, 800);
       } else {
         setUploadStatus("error");
+        const code = data.code || "";
+        setErrorCode(code);
+        setErrorMessage(ERROR_MESSAGES[code] || data.error || "Failed to process the report.");
       }
-    } catch {
-      clearInterval(progressInterval);
+    } catch (err: unknown) {
+      clearStageTimers();
       setUploadStatus("error");
+
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setErrorCode("CLIENT_TIMEOUT");
+        setErrorMessage(
+          "Request timed out after 35 seconds. The image may be too complex — try a clearer, smaller photo."
+        );
+      } else {
+        setErrorCode("NETWORK_ERROR");
+        setErrorMessage("Network error. Please check your connection and try again.");
+      }
     } finally {
+      clearTimeout(timeoutId);
       setIsUploading(false);
+      abortRef.current = null;
     }
   };
 
   const clearFile = () => {
+    // Abort any in-progress upload
+    if (abortRef.current) abortRef.current.abort();
+    clearStageTimers();
     setFile(null);
     setPreview(null);
     setUploadStatus("idle");
+    setErrorMessage(null);
+    setErrorCode(null);
     setProgress(0);
+    setStageKey("upload");
+    setIsUploading(false);
   };
+
+  // Get current stage info
+  const currentStage = STAGES.find((s) => s.key === stageKey) || STAGES[0];
+  const CurrentStageIcon = currentStage.icon;
 
   return (
     <div className="w-full space-y-4">
@@ -191,25 +324,52 @@ export default function Dropzone() {
               </div>
               <button
                 onClick={clearFile}
-                disabled={isUploading}
+                disabled={false}
                 className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-gray-400 transition-all hover:bg-white/10 hover:text-white disabled:opacity-50"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            {/* Progress Bar */}
-            {(isUploading || uploadStatus === "success") && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs text-gray-400">
-                  <span>{uploadStatus === "success" ? "Complete" : "Analyzing..."}</span>
-                  <span>{Math.round(progress)}%</span>
+            {/* Error Message */}
+            {errorMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-start gap-3 rounded-xl bg-red-500/10 border border-red-500/20 p-4"
+              >
+                <AlertCircle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-red-300">{errorMessage}</p>
+                  {errorCode && (
+                    <p className="text-[10px] text-red-500/50 mt-1 font-mono">Code: {errorCode}</p>
+                  )}
                 </div>
+              </motion.div>
+            )}
+
+            {/* Pipeline Progress */}
+            {(isUploading || uploadStatus === "success") && (
+              <div className="space-y-3">
+                {/* Stage label with icon */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    {uploadStatus === "success" ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-neon-green" />
+                    ) : (
+                      <CurrentStageIcon className="h-3.5 w-3.5 text-electric-blue animate-pulse" />
+                    )}
+                    <span>{currentStage.label}</span>
+                  </div>
+                  <span className="text-xs text-gray-500 font-mono">{Math.round(progress)}%</span>
+                </div>
+
+                {/* Progress bar */}
                 <div className="h-2 w-full overflow-hidden rounded-full bg-white/5">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.3 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
                     className="h-full rounded-full"
                     style={{
                       background:
@@ -223,6 +383,40 @@ export default function Dropzone() {
                     }}
                   />
                 </div>
+
+                {/* Stage dots */}
+                <div className="flex items-center justify-between px-1">
+                  {STAGES.slice(0, -1).map((stage) => {
+                    const StageIcon = stage.icon;
+                    const isPast = progress > stage.progress;
+                    const isCurrent = stageKey === stage.key;
+                    return (
+                      <div
+                        key={stage.key}
+                        className="flex flex-col items-center gap-1"
+                        title={stage.label}
+                      >
+                        <StageIcon
+                          className={`h-3 w-3 transition-colors duration-300 ${
+                            isPast
+                              ? "text-neon-green"
+                              : isCurrent
+                                ? "text-electric-blue"
+                                : "text-gray-600"
+                          }`}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Timeout hint */}
+                {isUploading && stageKey === "ocr" && (
+                  <div className="flex items-center gap-1.5 text-[10px] text-gray-600">
+                    <Clock className="h-3 w-3" />
+                    <span>OCR may take up to 25 seconds for complex images</span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -241,12 +435,12 @@ export default function Dropzone() {
               {isUploading ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Analyzing Report...</span>
+                  <span>Extracting Metrics...</span>
                 </>
               ) : uploadStatus === "success" ? (
                 <>
                   <CheckCircle2 className="h-5 w-5" />
-                  <span>Analysis Complete — Redirecting...</span>
+                  <span>Extraction Complete</span>
                 </>
               ) : uploadStatus === "error" ? (
                 <>
