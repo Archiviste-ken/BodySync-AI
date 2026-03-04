@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractTextFromImage } from "@/lib/ocr/extract";
-import { parseBCAReport, calculateConfidence, getParsingWarnings } from "@/lib/parser/bcaParser";
+import { parseBCAReport } from "@/lib/parser/bcaParser";
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,8 +29,9 @@ export async function POST(request: NextRequest) {
         }
       : parseBCAReport(rawText);
 
-    const confidence = calculateConfidence(metrics);
-    const warnings = getParsingWarnings(metrics);
+   const confidence = 0
+
+    const warnings: string[] = []
 
     if (ocrEmpty) {
       warnings.unshift(
