@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractTextFromImage } from "@/lib/ocr/extract";
-import { parseBCAReport } from "@/lib/parser/bcaParser";
+import { parseBCAReport, calculateConfidence, getParsingWarnings } from "@/lib/parser/bcaParser";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,14 +15,38 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Run the extraction pipeline
-    const rawText = await extractTextFromImage(buffer);
-const parsedMetrics = parseBCAReport(rawText);
+    // Run the extraction pipeline (never throws — returns OCRResult)
+    const ocrResult = await extractTextFromImage(buffer);
+    const { text: rawText, warning: ocrWarning } = ocrResult;
+    const ocrEmpty = !rawText || rawText.trim().length < 20;
+
+    const metrics = ocrEmpty
+      ? {
+          height: null, weight: null, skeletalMuscleMass: null,
+          bodyFatMass: null, bodyFatPercent: null, bmi: null,
+          bmr: null, visceralFat: null, totalBodyWater: null,
+          leanBodyMass: null, segmentalLean: null, segmentalFat: null,
+        }
+      : parseBCAReport(rawText);
+
+    const confidence = calculateConfidence(metrics);
+    const warnings = getParsingWarnings(metrics);
+
+    if (ocrEmpty) {
+      warnings.unshift(
+        "OCR could not detect text clearly. Please ensure the full report is visible or enter the values manually."
+      );
+    }
+    if (ocrWarning) {
+      warnings.unshift(`OCR Note: ${ocrWarning}`);
+    }
+
     return NextResponse.json({
       success: true,
-      message: "Text extracted successfully.",
-      metrics: parsedMetrics,
-      rawText: rawText,
+      metrics,
+      rawText,
+      confidence,
+      warnings,
     });
 
   } catch (error: unknown) {
