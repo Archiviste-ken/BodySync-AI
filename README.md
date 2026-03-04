@@ -1,36 +1,311 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🧬 BodySync AI --- Smart Fitness Analytics
 
-## Getting Started
+⚡ AI‑Powered Body Composition Intelligence Platform ⚡
 
-First, run the development server:
+Next.js • TypeScript • TailwindCSS • MongoDB • AI
 
-```bash
+> "Your body already contains the data. BodySync AI turns it into a
+> strategy." 💪
+
+------------------------------------------------------------------------
+
+## 🧠 What is BodySync AI?
+
+**BodySync AI** is an intelligent fitness analytics platform that
+transforms **BCA / InBody reports** into **deep, science‑based fitness
+protocols**.
+
+Instead of guessing workouts or following random diets, users upload
+their **Body Composition Analysis report**, and the system generates:
+
+🏋️ Personalized training protocol\
+🍽 Nutrition targets & macro breakdown\
+📊 Body composition insights\
+💧 Hydration & recovery recommendations\
+📈 Fitness dashboard with actionable insights
+
+------------------------------------------------------------------------
+
+# 🚀 Live Deployment
+
+🌐 **Live App:**\
+(Add your deployed link here)
+
+Upload your **BCA report** and instantly receive your **AI‑generated
+fitness protocol**.
+
+------------------------------------------------------------------------
+
+# ✨ Features
+
+  -----------------------------------------------------------------------
+  Feature                     Description
+  --------------------------- -------------------------------------------
+  📤 BCA Report Upload        Upload InBody / BCA reports as images or
+                              PDFs
+
+  🔎 OCR Metric Extraction    Automatically extracts body metrics
+
+  🧠 AI Body Analysis         Deep body composition analysis
+
+  📊 Smart Dashboard          Fitness analytics and insights
+
+  🏋️ Personalized Training    Weekly workout protocol
+  Plan                        
+
+  🍽 Nutrition Target Engine   Calorie & macro calculation
+
+  💧 Hydration Guidance       Daily hydration recommendations
+
+  😴 Recovery Targets         Sleep optimization guidance
+
+  ✏️ Manual Metric Correction Edit extracted values before generating
+                              plan
+
+  📱 Mobile Friendly UI       Responsive premium UI
+
+  🎨 Modern Fitness Design    Glassmorphism cards & smooth animations
+  -----------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+# ⚙️ How It Works
+
+### 1️⃣ Upload Your BCA Report
+
+Users upload a **Body Composition Analysis report** in:
+
+-   JPG
+-   PNG
+-   WebP
+-   PDF
+
+------------------------------------------------------------------------
+
+### 2️⃣ OCR Metric Extraction
+
+The system extracts key health metrics:
+
+-   📏 Height
+-   ⚖️ Weight
+-   💪 Skeletal Muscle Mass (SMM)
+-   🧬 Body Fat Mass
+-   📊 Body Fat %
+-   📉 BMI
+-   🔥 Basal Metabolic Rate (BMR)
+-   ❤️ Visceral Fat Level
+
+------------------------------------------------------------------------
+
+### 3️⃣ Smart Body Composition Analysis
+
+BodySync AI calculates advanced ratios:
+
+-   Muscle‑to‑Weight Ratio
+-   Fat‑to‑Weight Ratio
+-   Lean Body Mass
+-   Lean Mass %
+-   Fat Mass %
+-   Metabolic efficiency indicators
+
+These help determine body types like:
+
+✔ Lean\
+✔ Balanced\
+✔ Skinny‑fat\
+✔ Overfat\
+✔ Athletic
+
+------------------------------------------------------------------------
+
+### 4️⃣ AI Generates Fitness Protocol
+
+🏋️ **Workout Plan**
+
+Example:
+
+Day 1 --- Push\
+Day 2 --- Pull\
+Day 3 --- Legs\
+Day 4 --- Rest\
+Day 5 --- Upper Body\
+Day 6 --- Conditioning\
+Day 7 --- Recovery
+
+------------------------------------------------------------------------
+
+🍽 **Nutrition Plan**
+
+Includes:
+
+-   Daily calorie target
+-   Protein / Carbs / Fat breakdown
+-   Example meal structure
+-   Foods to prioritize
+-   Foods to reduce
+
+------------------------------------------------------------------------
+
+💧 **Hydration Targets**
+
+Personalized water intake recommendation.
+
+------------------------------------------------------------------------
+
+😴 **Recovery Strategy**
+
+Sleep optimization for muscle growth and metabolic recovery.
+
+------------------------------------------------------------------------
+
+# 📊 AI Dashboard
+
+Users receive a **professional fitness dashboard** with:
+
+### 🧠 AI Insights
+
+Examples:
+
+✔ Healthy visceral fat\
+⚠ High body fat percentage\
+⚠ Low skeletal muscle mass
+
+------------------------------------------------------------------------
+
+### 📈 Key Body Metrics
+
+-   Weight
+-   Muscle mass
+-   Body fat %
+-   BMI
+-   BMR
+-   Visceral fat
+
+------------------------------------------------------------------------
+
+### 🍽 Nutrition Breakdown
+
+Displays:
+
+Protein\
+Carbohydrates\
+Fats\
+Daily calories
+
+------------------------------------------------------------------------
+
+### 🏋️ Training Protocol
+
+Weekly workout plan with muscle‑group focus.
+
+------------------------------------------------------------------------
+
+# 🧑‍💻 Tech Stack
+
+### Frontend
+
+Framework → Next.js 15 (App Router)\
+UI → React 19\
+Language → TypeScript\
+Styling → TailwindCSS v4\
+Animations → Framer Motion
+
+------------------------------------------------------------------------
+
+### AI & Processing
+
+AI Engine → Groq API\
+OCR Engine → Tesseract.js\
+Image Processing → Sharp
+
+------------------------------------------------------------------------
+
+### Backend
+
+Database → MongoDB Atlas\
+ODM → Mongoose
+
+------------------------------------------------------------------------
+
+# 🏗 System Architecture
+
+User Upload\
+↓\
+Image Processing (Sharp)\
+↓\
+OCR Extraction (Tesseract)\
+↓\
+Body Metric Parser\
+↓\
+AI Analysis Engine\
+↓\
+Protocol Generator\
+↓\
+Fitness Dashboard
+
+------------------------------------------------------------------------
+
+# 📁 Project Structure
+
+bodysync-ai/ │ ├── app/ │ ├── upload/ │ ├── plan/ │ ├── ai-coach/ │ └──
+api/ │ ├── upload-report │ ├── analyze-report │ ├── generate-plan │ └──
+report/\[id\] │ ├── components/ │ ├── Dropzone │ ├── MetricsCorrection │
+├── InsightCards │ └── DashboardUI │ ├── lib/ │ ├── ocr │ ├── parser │
+└── db │ └── models/ └── Report
+
+------------------------------------------------------------------------
+
+# 🛠 Getting Started
+
+Clone the repository:
+
+git clone https://github.com/Archiviste-ken/bodysync-ai.git
+
+Navigate into the project:
+
+cd bodysync-ai
+
+Install dependencies:
+
+npm install
+
+Run development server:
+
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+http://localhost:3000
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+------------------------------------------------------------------------
 
-## Learn More
+# 📜 Scripts
 
-To learn more about Next.js, take a look at the following resources:
+npm run dev → Start development server\
+npm run build → Production build\
+npm run start → Start production server\
+npm run lint → Run ESLint
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+------------------------------------------------------------------------
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# 📈 Future Improvements
 
-## Deploy on Vercel
+📊 Multi‑report progress tracking\
+📷 Body transformation tracker\
+🤖 AI fitness coach chat\
+🛒 Smart grocery list generator\
+🔥 Fitness streak system\
+📅 Monthly body analytics comparison
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+------------------------------------------------------------------------
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# 👨‍💻 Author
+
+Shreyesh\
+GitHub: https://github.com/Archiviste-ken
+
+Built with 💻 + ☕ + 💪
+
+------------------------------------------------------------------------
+
+⭐ Star the repo if you like the project!
