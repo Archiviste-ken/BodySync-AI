@@ -29,7 +29,7 @@ their **Body Composition Analysis report**, and the system generates:
 # 🚀 Live Deployment
 
 🌐 **Live App:**\
-(Add your deployed link here)
+https://bodysync-aivercelapp.vercel.app/
 
 Upload your **BCA report** and instantly receive your **AI‑generated
 fitness protocol**.
