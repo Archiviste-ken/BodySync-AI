@@ -120,6 +120,7 @@ These help determine body types like:
 
 ### 4️⃣ AI Generates Fitness Protocol
 
+
 🏋️ **Workout Plan**
 
 Example:
