@@ -156,7 +156,7 @@ Personalized water intake recommendation.
 
 😴 **Recovery Strategy**
 
-Sleep optimization for muscle growth and metabolic recovery.
+Sleep optimization for muscle growth and metabolic recovery .
 
 ------------------------------------------------------------------------
 
