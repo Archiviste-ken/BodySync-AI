@@ -137,7 +137,7 @@ Day 7 --- Recovery
 
 🍽 **Nutrition Plan**
 
-Includes:
+It Includes:
 
 -   Daily calorie target
 -   Protein / Carbs / Fat breakdown
