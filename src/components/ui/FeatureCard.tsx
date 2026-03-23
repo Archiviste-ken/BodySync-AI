@@ -53,14 +53,12 @@ export default function FeatureCard({
 
   return (
     <div
-      className={`group glass-panel p-7 text-center transition-all duration-400 ${colors.glow} hover:border-white/22 hover:-translate-y-2 hover:scale-102 active:scale-98 ${animationClass}`}
-      style={{
-        transformStyle: "preserve-3d",
-        perspective: "1200px",
-      }}
+      className={`group glass-panel p-8 text-center transition-all duration-400 ${colors.glow} hover:border-white/22 hover:-translate-y-2 hover:scale-102 active:scale-98 ${animationClass}`}
     >
       {/* Radial gradient from top */}
-      <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.15),transparent_55%)] opacity-70 transition-opacity duration-500 group-hover:opacity-100" />
+      <div
+        className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.15),transparent_55%)] opacity-70 transition-opacity duration-500 group-hover:opacity-100"
+      />
 
       {/* Color-specific gradient overlay */}
       <div
@@ -76,9 +74,7 @@ export default function FeatureCard({
       <div className="pointer-events-none absolute inset-0 rounded-[inherit] shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]" />
 
       {/* Icon container with enhanced animation */}
-      <div
-        className={`relative z-10 mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border ${colors.iconBg} transition-all duration-400 group-hover:border-opacity-50 group-hover:scale-112 group-hover:rotate-8 group-hover:-translate-y-0.5`}
-      >
+      <div className={`relative z-10 mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border ${colors.iconBg} transition-all duration-400 group-hover:border-opacity-50 group-hover:scale-112 group-hover:rotate-8 group-hover:-translate-y-0.5`}>
         <div className="animate-icon-wobble">
           <Icon
             className={`h-8 w-8 ${colors.iconText} transition-all duration-300 group-hover:scale-110`}
@@ -91,10 +87,10 @@ export default function FeatureCard({
         />
       </div>
 
-      <h3 className="relative z-10 mb-3 font-heading text-xl font-bold text-white tracking-tight">
+      <h3 className="relative z-10 mb-3 font-heading text-xl sm:text-2xl font-bold text-white tracking-tight">
         {title}
       </h3>
-      <p className="relative z-10 text-sm leading-relaxed text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
+      <p className="relative z-10 text-base leading-relaxed text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
         {description}
       </p>
     </div>
