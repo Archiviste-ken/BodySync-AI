@@ -39,6 +39,7 @@
     -webkit-transform: translateZ(0);
     -webkit-backface-visibility: hidden;
     -webkit-perspective: 1000;
+    transform: translateZ(0);
   }
 
   /* Primary aurora layer */
@@ -128,6 +129,8 @@
       inset 0 1px 1px rgba(255, 255, 255, 0.15),
       inset 0 -1px 1px rgba(255, 255, 255, 0.05);
     border-radius: 1.25rem;
+    position: relative;
+    transform: translateZ(0);
   }
 
   .glass-panel-hover {
@@ -233,7 +236,7 @@
     background-size: 200% 100%;
     color: #050505;
     font-weight: 700;
-    padding: 1rem 2rem;
+    padding: 0.875rem 1.75rem;
     border-radius: 9999px;
     transition: all 0.4s var(--ease-premium);
     box-shadow:
@@ -244,6 +247,8 @@
     overflow: hidden;
     transform: translateZ(0);
     will-change: transform, box-shadow, background-position;
+    text-align: center;
+    display: inline-block;
   }
 
   .btn-primary::before {
@@ -953,11 +958,23 @@
 
 /* Mobile optimization - reduce complex animations */
 @media (max-width: 768px) {
+  /* Reduce heavy background effects */
+  body::before {
+    animation: none;
+    filter: blur(30px);
+    opacity: 0.6;
+  }
+
+  body::after {
+    opacity: 0.06;
+  }
+
   /* Disable heavy orb animations on mobile */
   .animate-float-orb-1,
   .animate-float-orb-2,
   .animate-float-orb-3 {
-    animation: none;
+    animation: none !important;
+    display: none;
   }
 
   /* Simplify blur effects on mobile */
@@ -965,36 +982,43 @@
   .blur-\[130px\],
   .blur-\[120px\],
   .blur-\[80px\] {
-    filter: blur(40px);
+    filter: blur(20px) !important;
   }
 
-  /* Reduce opacity of background effects */
-  .bg-neon-green\/\[0\.06\],
-  .bg-electric-blue\/\[0\.05\],
-  .bg-deep-purple\/\[0\.06\] {
-    opacity: 0.5;
+  .blur-3xl {
+    filter: blur(24px) !important;
   }
 
   /* Optimize backdrop filter for mobile */
   .glass-panel,
   .glass-panel-hover {
-    backdrop-filter: blur(16px) saturate(150%);
-    -webkit-backdrop-filter: blur(16px) saturate(150%);
-  }
-
-  /* Reduce grain noise on mobile */
-  body::after {
-    opacity: 0.08;
-  }
-
-  /* Disable aurora drift on mobile */
-  body::before {
-    animation: none;
+    backdrop-filter: blur(12px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
   }
 
   /* Simplify card hover effects on mobile */
   .glass-panel-hover:hover {
-    transform: translateY(-2px) translateZ(0);
+    transform: translateY(-1px) translateZ(0) !important;
+  }
+
+  /* Reduce text gradient animation on mobile */
+  .text-gradient-hero {
+    animation: none;
+    background-size: 100% auto;
+  }
+
+  /* Disable icon wobble on mobile */
+  .animate-icon-wobble {
+    animation: none !important;
+  }
+
+  /* Simplify button hover effects */
+  .btn-primary {
+    will-change: transform;
+  }
+
+  .btn-primary::before {
+    display: none;
   }
 }
 
@@ -1002,15 +1026,19 @@
 @media (min-width: 769px) and (max-width: 1024px) {
   /* Reduce blur intensity on tablets */
   .blur-\[150px\] {
-    filter: blur(80px);
+    filter: blur(100px);
   }
 
   .blur-\[130px\] {
-    filter: blur(70px);
+    filter: blur(90px);
   }
 
   .blur-\[120px\] {
-    filter: blur(60px);
+    filter: blur(80px);
+  }
+
+  body::before {
+    filter: blur(40px);
   }
 }
 
