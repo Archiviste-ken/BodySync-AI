@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { type LucideIcon } from "lucide-react";
 
 interface FeatureCardProps {
@@ -35,6 +34,13 @@ const colorMap = {
   },
 };
 
+// Map delay prop to animation class
+const delayMap: Record<number, string> = {
+  0.7: "animate-slide-up-stagger-1",
+  0.8: "animate-slide-up-stagger-2",
+  0.9: "animate-slide-up-stagger-3",
+};
+
 export default function FeatureCard({
   icon: Icon,
   title,
@@ -43,30 +49,18 @@ export default function FeatureCard({
   delay = 0,
 }: FeatureCardProps) {
   const colors = colorMap[accentColor];
+  const animationClass = delayMap[delay] || "animate-slide-up-stagger-1";
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 32, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.6, delay, ease: [0.16, 1, 0.3, 1] }}
-      whileHover={{
-        y: -8,
-        scale: 1.02,
-        rotateX: 2,
-        rotateY: -1,
-        transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
-      }}
-      whileTap={{ scale: 0.98 }}
+    <div
+      className={`group glass-panel p-7 text-center transition-all duration-400 ${colors.glow} hover:border-white/22 hover:-translate-y-2 hover:scale-102 active:scale-98 ${animationClass}`}
       style={{
         transformStyle: "preserve-3d",
         perspective: "1200px",
       }}
-      className={`group glass-panel p-7 text-center transition-all duration-400 ${colors.glow} hover:border-white/22`}
     >
       {/* Radial gradient from top */}
-      <div
-        className={`pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.15),transparent_55%)] opacity-70 transition-opacity duration-500 group-hover:opacity-100`}
-      />
+      <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.15),transparent_55%)] opacity-70 transition-opacity duration-500 group-hover:opacity-100" />
 
       {/* Color-specific gradient overlay */}
       <div
@@ -74,36 +68,28 @@ export default function FeatureCard({
       />
 
       {/* Floating background orb */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.5 }}
-        whileHover={{ opacity: 0.6, scale: 1.5 }}
-        transition={{ duration: 0.6 }}
-        className={`pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full ${colors.orbColor} blur-3xl opacity-0 group-hover:opacity-60`}
+      <div
+        className={`pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full ${colors.orbColor} blur-3xl opacity-0 group-hover:opacity-60 transition-all duration-600 group-hover:scale-150`}
       />
 
       {/* Inner light reflection */}
       <div className="pointer-events-none absolute inset-0 rounded-[inherit] shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]" />
 
       {/* Icon container with enhanced animation */}
-      <motion.div
-        whileHover={{ scale: 1.12, rotate: 8, y: -2 }}
-        transition={{ type: "spring", stiffness: 350, damping: 15 }}
-        className={`relative z-10 mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border ${colors.iconBg} transition-all duration-400 group-hover:border-opacity-50`}
+      <div
+        className={`relative z-10 mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border ${colors.iconBg} transition-all duration-400 group-hover:border-opacity-50 group-hover:scale-112 group-hover:rotate-8 group-hover:-translate-y-0.5`}
       >
-        <motion.div
-          animate={{ rotate: [0, 5, -5, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-        >
+        <div className="animate-icon-wobble">
           <Icon
             className={`h-8 w-8 ${colors.iconText} transition-all duration-300 group-hover:scale-110`}
           />
-        </motion.div>
+        </div>
 
         {/* Icon glow ring */}
         <div
           className={`absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${colors.glow}`}
         />
-      </motion.div>
+      </div>
 
       <h3 className="relative z-10 mb-3 font-heading text-xl font-bold text-white tracking-tight">
         {title}
@@ -111,6 +97,6 @@ export default function FeatureCard({
       <p className="relative z-10 text-sm leading-relaxed text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
         {description}
       </p>
-    </motion.div>
+    </div>
   );
 }
