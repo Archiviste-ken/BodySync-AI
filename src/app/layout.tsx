@@ -26,9 +26,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes"
+        />
+      </head>
       <body
         className={`${inter.variable} ${spaceGrotesk.variable} min-h-screen antialiased selection:bg-neon-green/30 selection:text-white`}
+        suppressHydrationWarning
       >
         {/* Base background */}
         <div className="fixed inset-0 -z-50 h-full w-full bg-[#020304]" />
