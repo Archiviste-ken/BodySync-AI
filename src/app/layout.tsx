@@ -51,7 +51,7 @@ export default function RootLayout({
         <div className="pointer-events-none fixed inset-0 -z-10 h-full w-full bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_15%)]" />
 
         <Navbar />
-        <main className="relative z-10 mx-auto max-w-7xl px-4 pb-14 sm:px-6 lg:px-8">
+        <main className="relative z-10 mx-auto max-w-7xl px-0 pb-14 sm:px-4 lg:px-8">
           {children}
         </main>
       </body>
