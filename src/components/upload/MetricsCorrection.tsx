@@ -20,16 +20,17 @@ import {
 import type { ParsedBCAData } from "@/lib/types";
 
 // ── Physiological validation ranges (matching backend) ──
-const VALID_RANGES: Record<string, { min: number; max: number; unit: string }> = {
-  height: { min: 120, max: 230, unit: "cm" },
-  weight: { min: 30, max: 250, unit: "kg" },
-  skeletalMuscleMass: { min: 10, max: 80, unit: "kg" },
-  bodyFatPercent: { min: 3, max: 60, unit: "%" },
-  bodyFatMass: { min: 1, max: 120, unit: "kg" },
-  bmi: { min: 10, max: 50, unit: "" },
-  bmr: { min: 800, max: 4000, unit: "kcal" },
-  visceralFat: { min: 1, max: 20, unit: "" },
-};
+const VALID_RANGES: Record<string, { min: number; max: number; unit: string }> =
+  {
+    height: { min: 120, max: 230, unit: "cm" },
+    weight: { min: 30, max: 250, unit: "kg" },
+    skeletalMuscleMass: { min: 10, max: 80, unit: "kg" },
+    bodyFatPercent: { min: 3, max: 60, unit: "%" },
+    bodyFatMass: { min: 1, max: 120, unit: "kg" },
+    bmi: { min: 10, max: 50, unit: "" },
+    bmr: { min: 800, max: 4000, unit: "kcal" },
+    visceralFat: { min: 1, max: 20, unit: "" },
+  };
 
 interface MetricField {
   key: keyof ParsedBCAData;
@@ -40,14 +41,62 @@ interface MetricField {
 }
 
 const fields: MetricField[] = [
-  { key: "height", label: "Height", unit: "cm", icon: Ruler, color: "text-electric-blue" },
-  { key: "weight", label: "Weight", unit: "kg", icon: Scale, color: "text-neon-green" },
-  { key: "skeletalMuscleMass", label: "Skeletal Muscle Mass", unit: "kg", icon: Dumbbell, color: "text-neon-green" },
-  { key: "bodyFatPercent", label: "Body Fat %", unit: "%", icon: Percent, color: "text-deep-purple" },
-  { key: "bodyFatMass", label: "Body Fat Mass", unit: "kg", icon: Activity, color: "text-deep-purple" },
-  { key: "bmi", label: "BMI", unit: "", icon: Heart, color: "text-electric-blue" },
-  { key: "bmr", label: "BMR", unit: "kcal", icon: Flame, color: "text-neon-green" },
-  { key: "visceralFat", label: "Visceral Fat Level", unit: "", icon: AlertTriangle, color: "text-yellow-400" },
+  {
+    key: "height",
+    label: "Height",
+    unit: "cm",
+    icon: Ruler,
+    color: "text-electric-blue",
+  },
+  {
+    key: "weight",
+    label: "Weight",
+    unit: "kg",
+    icon: Scale,
+    color: "text-neon-green",
+  },
+  {
+    key: "skeletalMuscleMass",
+    label: "Skeletal Muscle Mass",
+    unit: "kg",
+    icon: Dumbbell,
+    color: "text-neon-green",
+  },
+  {
+    key: "bodyFatPercent",
+    label: "Body Fat %",
+    unit: "%",
+    icon: Percent,
+    color: "text-deep-purple",
+  },
+  {
+    key: "bodyFatMass",
+    label: "Body Fat Mass",
+    unit: "kg",
+    icon: Activity,
+    color: "text-deep-purple",
+  },
+  {
+    key: "bmi",
+    label: "BMI",
+    unit: "",
+    icon: Heart,
+    color: "text-electric-blue",
+  },
+  {
+    key: "bmr",
+    label: "BMR",
+    unit: "kcal",
+    icon: Flame,
+    color: "text-neon-green",
+  },
+  {
+    key: "visceralFat",
+    label: "Visceral Fat Level",
+    unit: "",
+    icon: AlertTriangle,
+    color: "text-yellow-400",
+  },
 ];
 
 interface MetricsCorrectionProps {
@@ -64,8 +113,10 @@ function getValidationError(key: string, value: string): string | null {
   if (isNaN(num)) return "Must be a number";
   const range = VALID_RANGES[key];
   if (!range) return null;
-  if (num < range.min) return `Min ${range.min}${range.unit ? " " + range.unit : ""}`;
-  if (num > range.max) return `Max ${range.max}${range.unit ? " " + range.unit : ""}`;
+  if (num < range.min)
+    return `Min ${range.min}${range.unit ? " " + range.unit : ""}`;
+  if (num > range.max)
+    return `Max ${range.max}${range.unit ? " " + range.unit : ""}`;
   return null;
 }
 
@@ -90,7 +141,8 @@ export default function MetricsCorrection({
     const initial: Record<string, string> = {};
     for (const field of fields) {
       const val = metrics[field.key];
-      initial[field.key] = val !== null && typeof val === "number" ? String(val) : "";
+      initial[field.key] =
+        val !== null && typeof val === "number" ? String(val) : "";
     }
     return initial;
   });
@@ -107,8 +159,12 @@ export default function MetricsCorrection({
       ...metrics,
       height: values.height ? parseFloat(values.height) : null,
       weight: values.weight ? parseFloat(values.weight) : null,
-      skeletalMuscleMass: values.skeletalMuscleMass ? parseFloat(values.skeletalMuscleMass) : null,
-      bodyFatPercent: values.bodyFatPercent ? parseFloat(values.bodyFatPercent) : null,
+      skeletalMuscleMass: values.skeletalMuscleMass
+        ? parseFloat(values.skeletalMuscleMass)
+        : null,
+      bodyFatPercent: values.bodyFatPercent
+        ? parseFloat(values.bodyFatPercent)
+        : null,
       bodyFatMass: values.bodyFatMass ? parseFloat(values.bodyFatMass) : null,
       bmi: values.bmi ? parseFloat(values.bmi) : null,
       bmr: values.bmr ? parseFloat(values.bmr) : null,
@@ -120,14 +176,16 @@ export default function MetricsCorrection({
   const filledCount = fields.filter((f) => values[f.key] !== "").length;
 
   // Check if any field has a validation error
-  const hasValidationErrors = fields.some((f) => getValidationError(f.key, values[f.key]) !== null);
+  const hasValidationErrors = fields.some(
+    (f) => getValidationError(f.key, values[f.key]) !== null,
+  );
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="w-full max-w-2xl mx-auto space-y-6 px-1 sm:px-0"
+      className="mx-auto w-full max-w-2xl space-y-6 px-1 sm:px-0"
     >
       {/* Header */}
       <div className="text-center space-y-3">
@@ -173,7 +231,7 @@ export default function MetricsCorrection({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
-        className="rounded-xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-md p-4 shadow-[0_4px_24px_rgba(0,0,0,0.15)]"
+        className="glass-panel p-4"
       >
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-gray-400">Extraction Confidence</span>
@@ -213,7 +271,7 @@ export default function MetricsCorrection({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="rounded-xl border border-yellow-500/15 bg-white/[0.02] backdrop-blur-md p-4 space-y-2 shadow-[0_4px_24px_rgba(0,0,0,0.1)]"
+          className="glass-panel rounded-xl border border-yellow-500/15 p-4 space-y-2"
         >
           <div className="flex items-center gap-2 text-yellow-400 text-sm font-medium">
             <AlertTriangle className="h-4 w-4" />
@@ -232,7 +290,10 @@ export default function MetricsCorrection({
         {fields.map((field, index) => {
           const Icon = field.icon;
           const hasValue = values[field.key] !== "";
-          const validationError = getValidationError(field.key, values[field.key]);
+          const validationError = getValidationError(
+            field.key,
+            values[field.key],
+          );
           const range = VALID_RANGES[field.key];
 
           return (
@@ -242,7 +303,7 @@ export default function MetricsCorrection({
               variants={cardVariants}
               initial="hidden"
               animate="visible"
-              className={`group relative overflow-hidden rounded-xl border bg-white/[0.03] backdrop-blur-md p-4 sm:p-5 transition-all duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_32px_rgba(0,0,0,0.18)] ${
+              className={`group glass-panel-hover relative overflow-hidden rounded-xl border p-4 transition-all duration-300 sm:p-5 ${
                 validationError
                   ? "border-red-500/25"
                   : hasValue
@@ -279,7 +340,9 @@ export default function MetricsCorrection({
                     }`}
                   />
                   {field.unit && (
-                    <span className="text-sm text-gray-500 shrink-0">{field.unit}</span>
+                    <span className="text-sm text-gray-500 shrink-0">
+                      {field.unit}
+                    </span>
                   )}
                 </div>
                 {/* Validation error or range hint */}
@@ -287,7 +350,8 @@ export default function MetricsCorrection({
                   <p className="text-xs text-red-400 mt-2">{validationError}</p>
                 ) : range && hasValue ? null : range ? (
                   <p className="text-xs text-gray-600 mt-2">
-                    Range: {range.min}–{range.max}{range.unit ? ` ${range.unit}` : ""}
+                    Range: {range.min}–{range.max}
+                    {range.unit ? ` ${range.unit}` : ""}
                   </p>
                 ) : null}
               </div>
@@ -302,11 +366,11 @@ export default function MetricsCorrection({
           {filledCount} of {fields.length} metrics filled
         </p>
         <motion.button
-          whileHover={{ scale: 1.01 }}
+          whileHover={{ scale: 1.01, y: -1 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleSubmit}
           disabled={isGenerating || filledCount < 3 || hasValidationErrors}
-          className="w-full flex items-center justify-center gap-2 rounded-xl py-5 px-6 font-bold text-base transition-all duration-300 disabled:cursor-not-allowed bg-gradient-to-r from-neon-green to-electric-blue text-black hover:shadow-[0_0_30px_rgba(57,255,20,0.2)] disabled:opacity-50 shadow-[0_4px_20px_rgba(57,255,20,0.1)]"
+          className="w-full flex items-center justify-center gap-2 rounded-xl py-5 px-6 font-bold text-base transition-all duration-300 disabled:cursor-not-allowed bg-gradient-to-r from-neon-green to-electric-blue text-black hover:shadow-[0_0_30px_rgba(57,255,20,0.2)] disabled:opacity-50 shadow-[0_4px_20px_rgba(57,255,20,0.1)] active:scale-[0.98]"
         >
           {isGenerating ? (
             <>
