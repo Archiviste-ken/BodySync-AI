@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/ui/Navbar";
+import LiveBackground from "@/components/ui/LiveBackground";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -29,13 +30,21 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${spaceGrotesk.variable} min-h-screen antialiased selection:bg-neon-green/30 selection:text-white`}
       >
-        {/* Layered background effects */}
-        <div className="fixed inset-0 -z-10 h-full w-full bg-[#050505]" />
-        <div className="fixed inset-0 -z-10 h-full w-full bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(57,255,20,0.08),transparent)]" />
-        <div className="fixed inset-0 -z-10 h-full w-full bg-[radial-gradient(ellipse_60%_40%_at_80%_50%,rgba(15,240,252,0.04),transparent)]" />
+        {/* Base background */}
+        <div className="fixed inset-0 -z-50 h-full w-full bg-[#020304]" />
+
+        {/* Static gradient overlays */}
+        <div className="fixed inset-0 -z-40 h-full w-full bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(57,255,20,0.08),transparent)]" />
+        <div className="fixed inset-0 -z-40 h-full w-full bg-[radial-gradient(ellipse_60%_45%_at_80%_50%,rgba(15,240,252,0.06),transparent)]" />
+
+        {/* Live animated background */}
+        <LiveBackground />
+
+        {/* Top fade overlay */}
+        <div className="pointer-events-none fixed inset-0 -z-10 h-full w-full bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_15%)]" />
 
         <Navbar />
-        <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <main className="relative z-10 mx-auto max-w-7xl px-4 pb-14 sm:px-6 lg:px-8">
           {children}
         </main>
       </body>
