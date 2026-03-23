@@ -542,3 +542,51 @@
     opacity: 0.8;
   }
 }
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(15px, -20px) scale(1.05);
+  }
+  50% {
+    transform: translate(-10px, -30px) scale(1.02);
+  }
+  75% {
+    transform: translate(20px, -15px) scale(1.08);
+  }
+}
+
+@keyframes float-medium {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-20px, 15px) scale(1.06);
+  }
+  66% {
+    transform: translate(15px, -20px) scale(0.98);
+  }
+}
+
+@keyframes float-fast {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(25px, -25px) scale(1.1);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 25s ease-in-out infinite;
+}
+
+.animate-float-medium {
+  animation: float-medium 20s ease-in-out infinite;
+}
+
+.animate-float-fast {
+  animation: float-fast 15s ease-in-out infinite;
+}

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/ui/Navbar";
-import LiveBackgroundWrapper from "@/components/ui/LiveBackgroundWrapper";
+import LiveBackground from "@/components/ui/LiveBackground";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,7 +38,7 @@ export default function RootLayout({
         <div className="fixed inset-0 -z-40 h-full w-full bg-[radial-gradient(ellipse_60%_45%_at_80%_50%,rgba(15,240,252,0.06),transparent)]" />
 
         {/* Live animated background */}
-        <LiveBackgroundWrapper />
+        <LiveBackground />
 
         {/* Top fade overlay */}
         <div className="pointer-events-none fixed inset-0 -z-10 h-full w-full bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_15%)]" />
@@ -51,4 +51,3 @@ export default function RootLayout({
     </html>
   );
 }
-
