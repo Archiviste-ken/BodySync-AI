@@ -61,10 +61,19 @@ export default function AICoachPage() {
   };
 
   return (
-    <div className="relative mx-auto flex h-[calc(100vh-5rem)] max-w-4xl flex-col py-6">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="relative mx-auto flex h-[calc(100vh-5rem)] max-w-4xl flex-col py-6"
+    >
       {/* Background */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-0 -translate-x-1/2 h-[300px] w-[500px] rounded-full bg-neon-green/[0.03] blur-[120px]" />
+        <motion.div
+          animate={{ x: [0, 14, -8, 0], y: [0, -10, 8, 0] }}
+          transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute left-1/2 top-0 h-[320px] w-[540px] -translate-x-1/2 rounded-full bg-neon-green/[0.04] blur-[125px]"
+        />
       </div>
 
       {/* ── Header ── */}
@@ -72,7 +81,7 @@ export default function AICoachPage() {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="flex items-center gap-3 pb-5 border-b border-white/[0.06] mb-5 shrink-0"
+        className="glass-panel mb-5 flex shrink-0 items-center gap-3 border-b border-white/[0.06] px-4 pb-4 pt-3"
       >
         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-neon-green/10 border border-neon-green/15">
           <Activity className="h-5 w-5 text-neon-green" />
@@ -92,7 +101,8 @@ export default function AICoachPage() {
       </motion.div>
 
       {/* ── Chat Area ── */}
-      <div className="flex-1 overflow-y-auto glass-panel p-4 md:p-6 space-y-5 mb-4">
+      <div className="glass-panel relative mb-4 flex-1 space-y-5 overflow-y-auto p-4 md:p-6">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(15,240,252,0.08),transparent_45%)]" />
         <AnimatePresence initial={false}>
           {messages.map((msg, index) => (
             <motion.div
@@ -100,7 +110,7 @@ export default function AICoachPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              className={`flex items-start gap-3 ${
+              className={`relative z-10 flex items-start gap-3 ${
                 msg.role === "user" ? "flex-row-reverse" : "flex-row"
               }`}
             >
@@ -138,14 +148,14 @@ export default function AICoachPage() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-start gap-3"
+            className="relative z-10 flex items-start gap-3"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-neon-green/20 bg-neon-green/10">
               <Bot className="h-4 w-4 text-neon-green" />
             </div>
             <div className="flex items-center gap-2 rounded-2xl rounded-tl-md border border-white/[0.06] bg-white/[0.04] px-4 py-3">
               <Loader2 className="h-4 w-4 animate-spin text-neon-green" />
-              <span className="text-sm text-gray-400">Analyzing...</span>
+              <span className="text-sm text-gray-300">Analyzing...</span>
             </div>
           </motion.div>
         )}
@@ -166,17 +176,17 @@ export default function AICoachPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask about your macros, swap an exercise..."
-          className="w-full rounded-2xl border border-white/[0.08] bg-white/[0.03] py-4 pl-5 pr-14 text-sm text-white outline-none backdrop-blur-xl transition-all placeholder:text-gray-500 focus:border-neon-green/30 focus:shadow-[0_0_20px_rgba(57,255,20,0.05)]"
+          className="glass-panel-hover w-full rounded-2xl border border-white/[0.08] bg-white/[0.03] py-4 pl-5 pr-14 text-sm text-white outline-none backdrop-blur-xl transition-all placeholder:text-gray-500 focus:border-neon-green/30 focus:shadow-[0_0_20px_rgba(57,255,20,0.08)]"
           disabled={isLoading}
         />
         <button
           type="submit"
           disabled={!input.trim() || isLoading}
-          className="absolute right-2 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-neon-green to-electric-blue text-black transition-all hover:shadow-[0_0_20px_rgba(57,255,20,0.2)] disabled:opacity-40 disabled:cursor-not-allowed"
+          className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl bg-gradient-to-r from-neon-green to-electric-blue text-black transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(57,255,20,0.25)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Send className="h-4 w-4" />
         </button>
       </motion.form>
-    </div>
+    </motion.div>
   );
 }
